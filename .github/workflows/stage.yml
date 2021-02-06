@@ -24,10 +24,10 @@ jobs:
       with:
         path: ~/.ivy2/cache
         key: ${{ runner.os }}-build-${{ env.cache-name }}
-    - name: Set up JDK 1.8
+    - name: Set up JDK 11
       uses: actions/setup-java@v1
       with:
-        java-version: 1.8
+        java-version: 11
     - name: test/coverage
       run: |
         sbt clean coverage test
