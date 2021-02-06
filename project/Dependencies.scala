@@ -58,9 +58,9 @@ object Dependencies {
   )
 
   val testContainers = Seq(
-    "com.dimafeng" %% "testcontainers-scala-core" % "0.37.0" % "test",
-    "com.dimafeng" %% "testcontainers-scala-scalatest" % "0.37.0" % "test",
-    "com.dimafeng" %% "testcontainers-scala-postgresql" % "0.37.0" % "test"
+    "com.dimafeng" %% "testcontainers-scala-core" % "0.39.0" % "test",
+    "com.dimafeng" %% "testcontainers-scala-scalatest" % "0.39.0" % "test",
+    "com.dimafeng" %% "testcontainers-scala-postgresql" % "0.39.0" % "test"
   )
 
   val common = Seq(catsCore, catsEffect, scalaTest, pureConfig, jsoup, dbrush) ++
