@@ -71,18 +71,18 @@ object Main extends IOApp {
 
             for {
               _ <- migrations.exec[F](transactor, Some(x => Sync[F].delay(log.info(x))))
-              //f1 <- vkBot.start.start
+              f1 <- vkBot.start.start
               f2 <- tgBot.start.start
 
               _ <- tgBot.dailyReports("Ну что уебаны?! Готовы к метрикам?".some).everyDayAt(8, 0).start
 
               _ <- spamTg(messageRepo).start.void
-              //_ <- spamVk(messageRepo).start.void
+              _ <- spamVk(messageRepo).start.void
 
-              //_ <- vkRevoke(vkBotApi, vkBot, config.getLongPollServerReq)
-              //  .every(10.seconds, (9, 24)).start.void
+              _ <- vkRevoke(vkBotApi, vkBot, config.getLongPollServerReq)
+                .every(10.seconds, (9, 24)).start.void
 
-              //_ <- f1.join
+              _ <- f1.join
               _ <- f2.join
             } yield ()
         }
