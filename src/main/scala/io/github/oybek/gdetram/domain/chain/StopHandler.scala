@@ -14,10 +14,9 @@ import java.sql.Timestamp
 class StopHandler[F[_] : Applicative: Monad: Timer](implicit
                                                     stopRepo: StopRepoAlg[F],
                                                     journalRepo: JournalRepoAlg[F],
-                                                    tabloid: TabloidAlg[F]) extends Handler[F, Reply, (UserId, City, Text)] {
+                                                    tabloid: TabloidAlg[F]) extends Handler[F, (UserId, City, Text), Reply] {
 
-  override def handle(data: (UserId, City, Text))
-                     (implicit input: Input): F[Either[Reply, Reply]] = data match {
+  val handle: ((UserId, City, Text)) => F[Either[Reply, Reply]] = {
     case (userId, city, Text(userText)) =>
       stopRepo.selectMostMatched(userText, city.id).flatMap {
         case Some((stop, mistakeNum)) if mistakeNum < (stop.name.length / 2).max(4) =>
