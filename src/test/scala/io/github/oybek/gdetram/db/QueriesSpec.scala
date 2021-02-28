@@ -1,18 +1,18 @@
 package io.github.oybek.gdetram.db
 
-import java.sql.{DriverManager, Timestamp}
 import cats.effect.IO
 import com.dimafeng.testcontainers.{ForAllTestContainer, PostgreSQLContainer}
 import doobie.scalatest.IOChecker
 import doobie.util.ExecutionContexts
 import doobie.util.transactor.Transactor
-import io.github.oybek.gdetram.db.migration.migrations
-import io.github.oybek.gdetram.db.repository.{JournalRepo, Queries, UserRepo}
-import io.github.oybek.gdetram.domain.model.Platform.{Tg, Vk}
+import io.github.oybek.gdetram.db.repository.Queries
 import io.github.oybek.gdetram.domain.model
-import io.github.oybek.gdetram.domain.model.{PsMessage, Record}
-import io.github.oybek.dbrush.syntax._
+import io.github.oybek.gdetram.domain.model.Platform.{Tg, Vk}
+import io.github.oybek.gdetram.domain.model.Record
+import org.flywaydb.core.Flyway
 import org.scalatest.funsuite.AnyFunSuite
+
+import java.sql.Timestamp
 
 class QueriesSpec extends AnyFunSuite with IOChecker with ForAllTestContainer {
 
@@ -28,8 +28,14 @@ class QueriesSpec extends AnyFunSuite with IOChecker with ForAllTestContainer {
         container.password
       )
 
-  override def afterStart(): Unit =
-    migrations.exec(transactor).unsafeRunSync()
+  override def afterStart(): Unit = {
+    val flyway = Flyway
+      .configure()
+      .dataSource(container.jdbcUrl, container.username, container.password)
+      .load()
+    flyway.clean()
+    flyway.migrate()
+  }
 
   test("user repo queries") {
     check(Queries.selectUsersInfo)

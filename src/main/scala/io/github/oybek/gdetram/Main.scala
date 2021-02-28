@@ -16,14 +16,12 @@ import io.github.oybek.gdetram.service._
 import io.github.oybek.gdetram.util.TimeTools._
 import io.github.oybek.vk4s.api.{GetConversationsReq, GetLongPollServerReq, Unanswered, VkApi, VkApiHttp4s}
 import io.github.oybek.vk4s.domain.{Conversation, Peer}
-import io.github.oybek.dbrush.syntax._
 import org.http4s.client.Client
 import org.http4s.client.blaze.BlazeClientBuilder
 import org.http4s.client.middleware.Logger
 import org.slf4j.LoggerFactory
 import telegramium.bots.high.{Api, BotApi}
 import doobie.ExecutionContexts
-import io.github.oybek.gdetram.db.migration.migrations
 import io.github.oybek.gdetram.domain.chain.{CityHandler, FirstHandler, PsHandler, StopHandler}
 
 import scala.concurrent.duration.FiniteDuration
@@ -70,7 +68,7 @@ object Main extends IOApp {
             implicit val tgBot: TgBot[F] = new TgBot[F](config.adminTgIds.split(",").map(_.trim).toList)
 
             for {
-              _ <- migrations.exec[F](transactor, Some(x => Sync[F].delay(log.info(x))))
+              _ <- DB.initialize(transactor)
               f1 <- vkBot.start.start
               f2 <- tgBot.start.start
 

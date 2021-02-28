@@ -23,7 +23,7 @@ class DocFetcher[F[_]: Sync: Clock] extends DocFetcherAlg[F] {
   def fetchCached(url: String): F[Option[Document]] =
     cache.get(url) match {
       case None                                           => fetchUncached(url)
-      case Some((cachedTime, _)) if now - cachedTime > 30 => fetchUncached(url)
+      case Some((cachedTime, _)) if now - cachedTime > 10 => fetchUncached(url)
       case Some((_, document))                            =>
         Sync[F]
           .delay { log.info(s"$url is cached") }

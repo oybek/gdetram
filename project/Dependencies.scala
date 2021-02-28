@@ -16,14 +16,14 @@ object Dependencies {
     val telegramium = "2.49.0"
     val mock = "4.4.0"
     val mockTest = "3.1.0"
-    val dbrush = "0.1"
+    val flyway = "7.5.4"
   }
 
   val catsCore = "org.typelevel" %% "cats-core" % V.catsCore
   val catsEffect = "org.typelevel" %% "cats-effect" % V.catsEffect
   val scalaTest = "org.scalatest" %% "scalatest" % V.scalaTest % Test
   val pureConfig = "com.github.pureconfig" %% "pureconfig" % V.pureConfig
-  val dbrush = "io.github.oybek" % "dbrush" % V.dbrush
+  val flyway = "org.flywaydb" % "flyway-core" % V.flyway
   val jsoup = "org.jsoup" % "jsoup" % V.jsoup
 
   val doobie = Seq(
@@ -63,7 +63,7 @@ object Dependencies {
     "com.dimafeng" %% "testcontainers-scala-postgresql" % "0.39.0" % "test"
   )
 
-  val common = Seq(catsCore, catsEffect, scalaTest, pureConfig, jsoup, dbrush) ++
+  val common = Seq(catsCore, catsEffect, scalaTest, pureConfig, jsoup, flyway) ++
     telegramium ++
     circe ++
     http4s ++
