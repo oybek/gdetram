@@ -1,6 +1,6 @@
 package io.github.oybek.gdetram.util
 
-import io.github.oybek.gdetram.domain.model.Stop
+import io.github.oybek.gdetram.model.Stop
 import io.github.oybek.plato.model.TransportT.{Bus, Tram, Troll}
 import io.github.oybek.plato.model.{Arrival, TransportT}
 

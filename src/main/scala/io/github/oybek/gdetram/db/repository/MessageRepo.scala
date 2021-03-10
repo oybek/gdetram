@@ -6,7 +6,7 @@ import cats.instances.option._
 import cats.syntax.all._
 import doobie.implicits._
 import doobie.util.transactor.Transactor
-import io.github.oybek.gdetram.domain.model.Platform
+import io.github.oybek.gdetram.model.Platform
 
 trait MessageRepoAlg[F[_]] {
   def pollAsyncMessage(user: (Platform, Long)): F[Option[String]]

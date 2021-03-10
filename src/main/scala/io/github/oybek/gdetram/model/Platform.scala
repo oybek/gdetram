@@ -1,4 +1,4 @@
-package io.github.oybek.gdetram.domain.model
+package io.github.oybek.gdetram.model
 
 import doobie.postgres.implicits._
 import doobie.util.meta.Meta

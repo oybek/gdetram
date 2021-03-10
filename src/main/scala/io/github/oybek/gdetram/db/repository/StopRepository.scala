@@ -3,7 +3,7 @@ package io.github.oybek.gdetram.db.repository
 import cats.effect.Sync
 import doobie.implicits._
 import doobie.util.transactor.Transactor
-import io.github.oybek.gdetram.domain.model.Stop
+import io.github.oybek.gdetram.model.Stop
 
 trait StopRepoAlg[F[_]] {
   def selectMostMatched(query: String, cityId: Int): F[Option[(Stop, Int)]]

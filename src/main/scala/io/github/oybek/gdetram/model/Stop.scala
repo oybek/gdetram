@@ -1,4 +1,4 @@
-package io.github.oybek.gdetram.domain.model
+package io.github.oybek.gdetram.model
 
 case class Stop(id: Int,
                 name: String,

@@ -1,12 +1,12 @@
-package io.github.oybek.gdetram.domain.chain
+package io.github.oybek.gdetram.domain.handler
 
 import cats.{Applicative, Monad}
 import cats.implicits._
 import cats.effect._
 import io.github.oybek.gdetram.db.repository._
-import io.github.oybek.gdetram.domain.chain.model._
-import io.github.oybek.gdetram.domain.model._
-import io.github.oybek.gdetram.service.TabloidAlg
+import io.github.oybek.gdetram.domain.{Geo, Input, Text}
+import io.github.oybek.gdetram.model._
+import io.github.oybek.gdetram.service.TabloidService
 import io.github.oybek.gdetram.util.Formatting
 
 import java.sql.Timestamp
@@ -14,9 +14,9 @@ import java.sql.Timestamp
 class StopHandler[F[_] : Applicative: Monad: Timer](implicit
                                                     stopRepo: StopRepoAlg[F],
                                                     journalRepo: JournalRepoAlg[F],
-                                                    tabloid: TabloidAlg[F]) extends Handler[F, (UserId, City, Text), Reply] {
+                                                    tabloid: TabloidService[F]) extends Handler[F, (UserId, City, Input), Reply] {
 
-  val handle: ((UserId, City, Text)) => F[Either[Reply, Reply]] = {
+  val handle: ((UserId, City, Input)) => F[Either[Reply, Reply]] = {
     case (userId, city, Text(userText)) =>
       stopRepo.selectMostMatched(userText, city.id).flatMap {
         case Some((stop, mistakeNum)) if mistakeNum < (stop.name.length / 2).max(4) =>
@@ -41,6 +41,9 @@ class StopHandler[F[_] : Applicative: Monad: Timer](implicit
                |""".stripMargin,
             defaultKbrd(TextButton("город " + city.name))).asLeft[Reply].pure[F]
       }
+
+    case (_, city, Geo(_, _)) =>
+      ("...", defaultKbrd(TextButton("город " + city.name))).asLeft[Reply].pure[F]
   }
 
   private def getTabloid(stop: Stop) =

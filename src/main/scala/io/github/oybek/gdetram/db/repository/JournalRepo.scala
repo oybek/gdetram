@@ -9,7 +9,7 @@ import doobie._
 import doobie.implicits._
 import doobie.implicits.javasql._
 import doobie.util.query.Query0
-import io.github.oybek.gdetram.domain.model.Record
+import io.github.oybek.gdetram.model.Record
 
 case class DailyMetric(dateWhen: Timestamp, cityName: String, active: Int, passive: Int)
 

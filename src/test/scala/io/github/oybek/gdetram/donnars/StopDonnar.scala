@@ -1,6 +1,6 @@
 package io.github.oybek.gdetram.donnars
 
-import io.github.oybek.gdetram.domain.model.{City, Stop}
+import io.github.oybek.gdetram.model.{City, Stop}
 
 trait StopDonnar {
   val stop =

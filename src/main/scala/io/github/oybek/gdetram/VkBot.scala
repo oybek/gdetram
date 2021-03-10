@@ -6,9 +6,8 @@ import cats.effect.syntax.all._
 import cats.effect.{Async, Clock, Concurrent, Sync, Timer}
 import cats.syntax.all._
 import io.github.oybek.gdetram.db.repository.JournalRepoAlg
-import io.github.oybek.gdetram.domain.CoreAlg
-import io.github.oybek.gdetram.domain.chain.model.{Geo, Text}
-import io.github.oybek.gdetram.domain.model.Platform.Vk
+import io.github.oybek.gdetram.domain.{Logic, Geo, Text}
+import io.github.oybek.gdetram.model.Platform.Vk
 import io.github.oybek.gdetram.util.Formatting._
 import io.github.oybek.vk4s.api._
 import io.github.oybek.vk4s.domain.{AudioMessage, LongPollBot, MessageNew, WallPostNew, WallReplyNew}
@@ -19,7 +18,7 @@ import org.slf4j.{Logger, LoggerFactory}
 import scala.concurrent.duration._
 
 class VkBot[F[_]: Async: Timer: Concurrent](getLongPollServerReq: GetLongPollServerReq)(implicit httpClient: Client[F],
-                                                                                        core: CoreAlg[F],
+                                                                                        core: Logic[F],
                                                                                         vkApi: VkApi[F])
     extends LongPollBot[F](httpClient, vkApi, getLongPollServerReq) {
 

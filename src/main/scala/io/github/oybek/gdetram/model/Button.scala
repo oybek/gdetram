@@ -1,4 +1,4 @@
-package io.github.oybek.gdetram.domain.model
+package io.github.oybek.gdetram.model
 
 import io.github.oybek.vk4s.api.{Action, Keyboard, Button => VkButton}
 import telegramium.bots.{InlineKeyboardButton, InlineKeyboardMarkup}

@@ -1,4 +1,4 @@
-package io.github.oybek.gdetram.domain.chain.model
+package io.github.oybek.gdetram.domain
 
 sealed trait Input
 case class Text(text: String) extends Input

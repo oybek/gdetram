@@ -5,9 +5,8 @@ import cats.effect.{Async, Concurrent, Sync, Timer}
 import cats.syntax.all._
 import cats.instances.option._
 import io.github.oybek.gdetram.db.repository.JournalRepoAlg
-import io.github.oybek.gdetram.domain.chain.model.{Geo, Text}
-import io.github.oybek.gdetram.domain.{CoreAlg, chain}
-import io.github.oybek.gdetram.domain.model.Platform.Tg
+import io.github.oybek.gdetram.domain.{Logic, Geo, Text, handler}
+import io.github.oybek.gdetram.model.Platform.Tg
 import io.github.oybek.gdetram.service.MetricServiceAlg
 import io.github.oybek.gdetram.util.TgExtractors
 import io.github.oybek.vk4s.domain.Coord
@@ -19,7 +18,7 @@ import scala.concurrent.duration.DurationInt
 
 class TgBot[F[_]: Async: Timer: Concurrent](adminIds: List[String])
                                            (implicit bot: Api[F],
-                                            core: CoreAlg[F],
+                                            core: Logic[F],
                                             journalRepo: JournalRepoAlg[F],
                                             metricService: MetricServiceAlg[F])
     extends LongPollBot[F](bot)

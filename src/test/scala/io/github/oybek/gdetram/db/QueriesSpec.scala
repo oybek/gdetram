@@ -1,14 +1,15 @@
 package io.github.oybek.gdetram.db
 
 import cats.effect.IO
+import cats.implicits.catsSyntaxOptionId
 import com.dimafeng.testcontainers.{ForAllTestContainer, PostgreSQLContainer}
 import doobie.scalatest.IOChecker
 import doobie.util.ExecutionContexts
 import doobie.util.transactor.Transactor
 import io.github.oybek.gdetram.db.repository.Queries
-import io.github.oybek.gdetram.domain.model
-import io.github.oybek.gdetram.domain.model.Platform.{Tg, Vk}
-import io.github.oybek.gdetram.domain.model.Record
+import io.github.oybek.gdetram.model
+import io.github.oybek.gdetram.model.Platform.{Tg, Vk}
+import io.github.oybek.gdetram.model.{Record, User}
 import org.flywaydb.core.Flyway
 import org.scalatest.funsuite.AnyFunSuite
 
@@ -38,7 +39,7 @@ class QueriesSpec extends AnyFunSuite with IOChecker with ForAllTestContainer {
   }
 
   test("user repo queries") {
-    check(Queries.selectUsersInfo)
+    check(Queries.selectAllUsersQuery)
   }
 
   test("city select") {
@@ -49,10 +50,9 @@ class QueriesSpec extends AnyFunSuite with IOChecker with ForAllTestContainer {
     check(Queries.selectAllCitites)
   }
 
-  test("usr upsert/select queries") {
-    check(Queries.upsertUserCity(Vk, 1, 1))
-    check(Queries.upsertUserCity(Vk, 1, 1))
-    check(Queries.selectUser(Vk, 1))
+  test("user_info upsert/select queries") {
+    check(Queries.upsertUserQuery(User(Vk, 1, 1, 1.some, 1)))
+    check(Queries.selectUserQuery(Vk, 1))
   }
 
   test("Journal insert request") {

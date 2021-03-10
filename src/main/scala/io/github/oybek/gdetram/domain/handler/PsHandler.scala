@@ -1,4 +1,4 @@
-package io.github.oybek.gdetram.domain.chain
+package io.github.oybek.gdetram.domain.handler
 
 import cats.{Applicative, Monad}
 import cats.implicits._

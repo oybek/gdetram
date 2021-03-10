@@ -1,9 +1,9 @@
 package io.github.oybek.gdetram.service
 
 import cats.effect.IO
-import io.github.oybek.gdetram.db.repository.UserRepoAlg
-import io.github.oybek.gdetram.domain.model.Platform.{Tg, Vk}
-import io.github.oybek.gdetram.domain.model.{City, User, UserInfo}
+import io.github.oybek.gdetram.db.repository.{CityRepo, CityRepoAlg, UserRepo}
+import io.github.oybek.gdetram.model.Platform.{Tg, Vk}
+import io.github.oybek.gdetram.model.{City, User}
 import io.github.oybek.gdetram.donnars.StopDonnar
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.flatspec.AnyFlatSpec
@@ -13,26 +13,31 @@ import java.sql.Timestamp
 import java.time.LocalDateTime
 
 class MetricsServiceSpec extends AnyFlatSpec with Matchers with MockFactory with StopDonnar {
-  implicit val userRepo = stub[UserRepoAlg[IO]]
+  implicit val userRepo = stub[UserRepo[IO]]
+  implicit val cityRepo = stub[CityRepoAlg[IO]]
   implicit val metricService = new MetricService[IO]
 
   private val yekb = City(1, "Екатеринбург", 0.0f, 0.0f)
   private val perm = City(2, "Пермь", 0.0f, 0.0f)
 
   "userStats method" must "evaluate correct stats" in {
-    (() => userRepo.selectUsersInfo)
+    (() => cityRepo.selectAll)
       .when()
-      .returns(IO {
+      .returns(IO.pure(List(yekb, perm)))
+
+    (() => userRepo.selectAll)
+      .when()
+      .returns(IO.pure(
         List(
-          UserInfo(User(Vk, 123, yekb), 1.weeksAgo),
-          UserInfo(User(Vk, 123, yekb), 5.weeksAgo),
-          UserInfo(User(Vk, 123, perm), 5.weeksAgo),
-          UserInfo(User(Tg, 123, yekb), 1.weeksAgo),
-          UserInfo(User(Tg, 123, yekb), 5.weeksAgo),
-          UserInfo(User(Tg, 123, perm), 5.weeksAgo),
-          UserInfo(User(Tg, 123, perm), 5.weeksAgo)
+          User(Vk, 123, 1, None, 1),
+          User(Vk, 123, 1, None, 0),
+          User(Vk, 123, 2, None, 0),
+          User(Tg, 123, 1, None, 1),
+          User(Tg, 123, 1, None, 0),
+          User(Tg, 123, 2, None, 0),
+          User(Tg, 123, 2, None, 0)
         )
-      })
+      ))
 
     metricService.userStats.unsafeRunSync() shouldBe (
       """ВК
