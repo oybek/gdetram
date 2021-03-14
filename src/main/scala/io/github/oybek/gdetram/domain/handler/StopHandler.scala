@@ -1,10 +1,11 @@
 package io.github.oybek.gdetram.domain.handler
 
+import cats.data.EitherT
 import cats.{Applicative, Monad}
 import cats.implicits._
 import cats.effect._
 import io.github.oybek.gdetram.db.repository._
-import io.github.oybek.gdetram.domain.{Geo, Input, Text}
+import io.github.oybek.gdetram.domain.Text
 import io.github.oybek.gdetram.model._
 import io.github.oybek.gdetram.service.TabloidService
 import io.github.oybek.gdetram.util.Formatting
@@ -14,37 +15,48 @@ import java.sql.Timestamp
 class StopHandler[F[_] : Applicative: Monad: Timer](implicit
                                                     stopRepo: StopRepoAlg[F],
                                                     journalRepo: JournalRepoAlg[F],
-                                                    tabloid: TabloidService[F]) extends Handler[F, (UserId, City, Input), Reply] {
+                                                    tabloid: TabloidService[F]) extends Handler[F, (UserId, City, Text), Reply] {
 
-  val handle: ((UserId, City, Input)) => F[Either[Reply, Reply]] = {
+  override def handle(input: (UserId, City, Text)): EitherT[F, Reply, Reply] = input match {
     case (userId, city, Text(userText)) =>
-      stopRepo.selectMostMatched(userText, city.id).flatMap {
+      EitherT.right(stopRepo.selectMostMatched(userText, city.id)).flatMap {
         case Some((stop, mistakeNum)) if mistakeNum < (stop.name.length / 2).max(4) =>
-          for {
-            tabloidText <- getTabloid(stop)
-            currMillis  <- Timer[F].clock.realTime(scala.concurrent.duration.MILLISECONDS)
-            _           <- journalRepo.insert(Record(stop.id, new Timestamp(currMillis), userId._2.toString, userText, userId._1))
-            replyKbrd = defaultKbrd(
-              TextButton("город " + city.name),
-              TextButton(stop.name)
-            )
-          } yield (tabloidText, replyKbrd).asRight[Reply]
+          nextF(replyTabloid(userId, city, userText, stop))
+
         case Some(_) =>
-          ("""|Не знаю такую остановку 😟
+          reply(
+            """
+              |Не знаю такую остановку 😟
               |
               |Отправьте геопозицию - я подскажу названия ближайших остановок
               |""".stripMargin,
-            defaultKbrd(TextButton("город " + city.name))).asLeft[Reply].pure[F]
+            defaultKbrd(TextButton("город " + city.name)))
+
         case None =>
-          (s"""|Для города ${city.name}
+          reply(
+            s"""
+               |Для города ${city.name}
                |пока не загружена база остановок
                |""".stripMargin,
-            defaultKbrd(TextButton("город " + city.name))).asLeft[Reply].pure[F]
+            defaultKbrd(TextButton("город " + city.name)))
       }
-
-    case (_, city, Geo(_, _)) =>
-      ("...", defaultKbrd(TextButton("город " + city.name))).asLeft[Reply].pure[F]
   }
+
+  private def replyTabloid(userId: UserId,
+                           city: City,
+                           userText: String,
+                           stop: Stop) =
+    for {
+      tabloidText <- getTabloid(stop)
+      currMillis <- Timer[F].clock.realTime(scala.concurrent.duration.MILLISECONDS)
+      _ <- journalRepo.insert(Record(stop.id, new Timestamp(currMillis), userId._2.toString, userText, userId._1))
+    } yield (
+      tabloidText,
+      defaultKbrd(
+        TextButton("город " + city.name),
+        TextButton(stop.name)
+      )
+    )
 
   private def getTabloid(stop: Stop) =
     tabloid

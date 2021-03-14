@@ -18,11 +18,13 @@ class LogicImpl[F[_]: Sync: Concurrent: Timer](implicit
 
   def handle(userId: UserId)(input: Input): F[Reply] = (
     for {
-      _            <- EitherT(firstHandler.handle(input))
-      city         <- EitherT(cityHandler.handle(userId, input))
-      (text, kbrd) <- EitherT(stopHandler.handle(userId, city, input))
-      psText       <- EitherT(psHandler.handle(userId))
-      result = (text + psText.fold("")("\n" + _), kbrd)
-    } yield result
-  ).value.map(_.fold(identity, identity))
+      _            <- firstHandler.handle(input)
+      (city, text) <- cityHandler.handle(userId, input)
+      (text, kbrd) <- stopHandler.handle(userId, city, text)
+      psText       <- psHandler.handle(userId)
+    } yield (
+      text + psText.fold("")("\n" + _),
+      kbrd
+    )
+  ).fold(identity, identity)
 }
