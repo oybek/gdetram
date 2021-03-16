@@ -1,10 +1,18 @@
 package io.github.oybek.gdetram.service
 
 import cats.effect.IO
-import io.github.oybek.gdetram.db.repository.{CityRepo, CityRepoAlg, UserRepo}
+import cats.implicits._
+import cats.instances.list._
+import com.dimafeng.testcontainers.{ForAllTestContainer, PostgreSQLContainer}
+import doobie.ConnectionIO
+import doobie.implicits._
+import doobie.util.ExecutionContexts
+import doobie.util.transactor.Transactor
+import io.github.oybek.gdetram.db.repository.{CityRepo, CityRepoAlg, UserRepo, UserRepoImpl}
 import io.github.oybek.gdetram.model.Platform.{Tg, Vk}
 import io.github.oybek.gdetram.model.{City, User}
 import io.github.oybek.gdetram.donnars.StopDonnar
+import org.flywaydb.core.Flyway
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
@@ -12,10 +20,45 @@ import org.scalatest.matchers.should.Matchers
 import java.sql.Timestamp
 import java.time.LocalDateTime
 
-class MetricsServiceSpec extends AnyFlatSpec with Matchers with MockFactory with StopDonnar {
-  implicit val userRepo = stub[UserRepo[IO]]
-  implicit val cityRepo = stub[CityRepoAlg[IO]]
-  implicit val metricService = new MetricService[IO]
+class MetricsServiceSpec extends AnyFlatSpec
+                         with Matchers
+                         with MockFactory
+                         with StopDonnar
+                         with ForAllTestContainer {
+  override lazy val container = PostgreSQLContainer()
+  implicit lazy val cs = IO.contextShift(ExecutionContexts.synchronous)
+  implicit lazy val tm = IO.timer(ExecutionContexts.synchronous)
+  implicit lazy val transactor =
+    Transactor
+      .fromDriverManager[IO](
+        container.driverClassName,
+        container.jdbcUrl,
+        container.username,
+        container.password
+      )
+
+  override def afterStart(): Unit = {
+    val flyway = Flyway
+      .configure()
+      .dataSource(container.jdbcUrl, container.username, container.password)
+      .load()
+    flyway.clean()
+    flyway.migrate()
+
+    (
+      userRepo.upsert(User(Vk, 123, 1, None, 1)) >>
+      userRepo.upsert(User(Vk, 124, 1, None, 0)) >>
+      userRepo.upsert(User(Vk, 125, 2, None, 0)) >>
+      userRepo.upsert(User(Tg, 123, 1, None, 1)) >>
+      userRepo.upsert(User(Tg, 124, 1, None, 0)) >>
+      userRepo.upsert(User(Tg, 125, 2, None, 0)) >>
+      userRepo.upsert(User(Tg, 126, 2, None, 0))
+    ).transact(transactor).void.unsafeRunSync()
+  }
+
+  implicit lazy val userRepo = new UserRepoImpl
+  implicit lazy val cityRepo = stub[CityRepoAlg[IO]]
+  implicit lazy val metricService = new MetricService[IO]
 
   private val yekb = City(1, "Екатеринбург", 0.0f, 0.0f)
   private val perm = City(2, "Пермь", 0.0f, 0.0f)
@@ -24,20 +67,6 @@ class MetricsServiceSpec extends AnyFlatSpec with Matchers with MockFactory with
     (() => cityRepo.selectAll)
       .when()
       .returns(IO.pure(List(yekb, perm)))
-
-    (() => userRepo.selectAll)
-      .when()
-      .returns(IO.pure(
-        List(
-          User(Vk, 123, 1, None, 1),
-          User(Vk, 123, 1, None, 0),
-          User(Vk, 123, 2, None, 0),
-          User(Tg, 123, 1, None, 1),
-          User(Tg, 123, 1, None, 0),
-          User(Tg, 123, 2, None, 0),
-          User(Tg, 123, 2, None, 0)
-        )
-      ))
 
     metricService.userStats.unsafeRunSync() shouldBe (
       """ВК

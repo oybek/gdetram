@@ -4,6 +4,8 @@ import java.io.File
 import java.sql.Timestamp
 import cats.syntax.all._
 import cats.effect.Sync
+import doobie.implicits._
+import doobie.Transactor
 import io.github.oybek.gdetram.db.repository.{CityRepo, CityRepoAlg, UserRepo}
 import io.github.oybek.gdetram.model.Platform._
 import io.github.oybek.gdetram.model.{City, User}
@@ -14,12 +16,14 @@ trait MetricServiceAlg[F[_]] {
   def userStats: F[String]
 }
 
-class MetricService[F[_]: Sync](implicit userRepo: UserRepo[F],
-                                         cityRepo: CityRepoAlg[F]) extends MetricServiceAlg[F] {
+class MetricService[F[_]: Sync](implicit
+                                userRepo: UserRepo,
+                                cityRepo: CityRepoAlg[F],
+                                transactor: Transactor[F]) extends MetricServiceAlg[F] {
 
   def userStats: F[String] =
     for {
-      usersInfo <- userRepo.selectAll
+      usersInfo <- userRepo.selectAll.transact(transactor)
       cities <- cityRepo.selectAll
       caption = usersInfo
         .groupBy(_.platform)

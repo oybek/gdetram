@@ -7,7 +7,7 @@ import doobie.util
 import doobie.util.ExecutionContexts
 import doobie.util.transactor.Transactor
 import io.github.oybek.gdetram.db.DB
-import io.github.oybek.gdetram.db.repository.{CityRepo, CityRepoAlg, JournalRepo, MessageRepo, MessageRepoAlg, StopRepo, StopRepoAlg, UserRepoImpl, UserRepo}
+import io.github.oybek.gdetram.db.repository.{CityRepo, CityRepoAlg, JournalRepo, MessageRepoImpl, MessageRepo, StopRepo, StopRepoAlg, UserRepoImpl, UserRepo}
 import io.github.oybek.gdetram.domain.LogicImpl
 import io.github.oybek.gdetram.donnars.StopDonnar
 import io.github.oybek.gdetram.service.{MetricService, TabloidService}

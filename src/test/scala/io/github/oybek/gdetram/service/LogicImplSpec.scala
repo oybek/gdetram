@@ -1,38 +1,63 @@
 package io.github.oybek.gdetram.service
 
 import cats.effect.IO
+import com.dimafeng.testcontainers.{ForAllTestContainer, PostgreSQLContainer}
+import doobie.implicits._
 import doobie.util.ExecutionContexts
+import doobie.util.transactor.Transactor
 import io.github.oybek.gdetram.db.repository._
+import io.github.oybek.gdetram.domain.handler.{CityHandler, FirstHandler, StatusFormer, StopHandler}
+import io.github.oybek.gdetram.domain.{LogicImpl, Text}
 import io.github.oybek.gdetram.donnars.StopDonnar
 import io.github.oybek.gdetram.model.Platform.Vk
 import io.github.oybek.gdetram.model.{City, Stop, User}
 import io.github.oybek.plato.model.TransportT._
 import io.github.oybek.plato.model.{Arrival, TransportT}
-import io.github.oybek.gdetram.domain.{LogicImpl, Text}
-import io.github.oybek.gdetram.domain.handler.{CityHandler, FirstHandler, PsHandler, StopHandler}
+import org.flywaydb.core.Flyway
 import org.scalamock.scalatest.MockFactory
 import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 
 import scala.concurrent.duration._
 
-class LogicImplSpec extends AnyFlatSpec with Matchers with MockFactory with StopDonnar {
-  implicit val cs = IO.contextShift(ExecutionContexts.synchronous)
-  implicit val tm = IO.timer(ExecutionContexts.synchronous)
+class LogicImplSpec extends AnyFlatSpec with Matchers
+                                        with MockFactory
+                                        with StopDonnar
+                                        with ForAllTestContainer {
+  override lazy val container = PostgreSQLContainer()
+  implicit lazy val cs = IO.contextShift(ExecutionContexts.synchronous)
+  implicit lazy val tm = IO.timer(ExecutionContexts.synchronous)
+  implicit lazy val transactor =
+    Transactor
+      .fromDriverManager[IO](
+        container.driverClassName,
+        container.jdbcUrl,
+        container.username,
+        container.password
+      )
 
-  implicit val journalRepo = stub[JournalRepoAlg[IO]]
-  implicit val PSService = stub[MessageRepoAlg[IO]]
-  implicit val stopRepo = stub[StopRepoAlg[IO]]
-  implicit val extractor = stub[TabloidService[IO]]
-  implicit val cityRepo = stub[CityRepoAlg[IO]]
-  implicit val userRepo = stub[UserRepo[IO]]
+  implicit lazy val journalRepo = stub[JournalRepoAlg[IO]]
+  implicit lazy val messageRepo = new MessageRepoImpl
+  implicit lazy val stopRepo = stub[StopRepoAlg[IO]]
+  implicit lazy val extractor = stub[TabloidService[IO]]
+  implicit lazy val cityRepo = stub[CityRepoAlg[IO]]
+  implicit lazy val userRepo = new UserRepoImpl
 
-  implicit val firstHandler = new FirstHandler[IO]
-  implicit val cityHandler = new CityHandler[IO]
-  implicit val stopHandler = new StopHandler[IO]
-  implicit val psHandler = new PsHandler[IO]
+  implicit lazy val firstHandler = new FirstHandler[IO]
+  implicit lazy val cityHandler = new CityHandler[IO]
+  implicit lazy val stopHandler = new StopHandler[IO]
+  implicit lazy val psHandler = new StatusFormer[IO]
 
-  private val rightArrow = "➡️"
+  override def afterStart(): Unit = {
+    val flyway = Flyway
+      .configure()
+      .dataSource(container.jdbcUrl, container.username, container.password)
+      .load()
+    flyway.clean()
+    flyway.migrate()
+
+    userRepo.upsert(User(Vk, 123, 1, None, 0)).transact(transactor).unsafeRunSync()
+  }
 
   "simple query" must "work" in {
     // test datas
@@ -47,10 +72,6 @@ class LogicImplSpec extends AnyFlatSpec with Matchers with MockFactory with Stop
       .when()
       .returns(IO { List(City(1, "city", 0.0f, 0.0f)) })
 
-    (userRepo.select _)
-      .when(*, *)
-      .returns(IO { Some(User(Vk, 123, 1, None, 0)) })
-
     (cityRepo.select _)
       .when(*)
       .returns(IO { City(1, "city", 0.0f, 0.0f) })
@@ -63,10 +84,6 @@ class LogicImplSpec extends AnyFlatSpec with Matchers with MockFactory with Stop
       .when(*)
       .returns(IO { 1 })
 
-    (PSService.pollAsyncMessage _)
-      .when(*)
-      .returns(IO { None })
-
     // action
     val core = new LogicImpl[IO]
     val result = core.handle(Vk -> 123)(Text("Дом кино"))
@@ -76,18 +93,14 @@ class LogicImplSpec extends AnyFlatSpec with Matchers with MockFactory with Stop
       s"""
          |Дом кино $rightArrow Гагарина
          |${TransportT.emoji(TransportT.Bus)} 25 - 5 мин.
+         |
+         |city
          |""".stripMargin
   }
 
   "when geo is got" must "find nearest stops and update cache" in {
-    val user = Vk -> 123L
-
-    (PSService.pollAsyncMessage _)
-      .when(*)
-      .returns(IO { None })
-
-    val core = new LogicImpl[IO]
-
     // TODO: complete the test
   }
+
+  private val rightArrow = "➡️"
 }

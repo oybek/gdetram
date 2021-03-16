@@ -10,8 +10,8 @@ import io.github.oybek.gdetram.config.Config
 import io.github.oybek.gdetram.db.DB
 import io.github.oybek.gdetram.db.repository._
 import io.github.oybek.gdetram.model.Platform.{Tg, Vk}
-import io.github.oybek.gdetram.domain.{LogicImpl, Logic}
-import io.github.oybek.gdetram.service.{TabloidServiceBustimeImpl, DocFetcherAlg}
+import io.github.oybek.gdetram.domain.{Logic, LogicImpl}
+import io.github.oybek.gdetram.service.{DocFetcherAlg, TabloidServiceBustimeImpl}
 import io.github.oybek.gdetram.service._
 import io.github.oybek.gdetram.util.TimeTools._
 import io.github.oybek.vk4s.api.{GetConversationsReq, GetLongPollServerReq, Unanswered, VkApi, VkApiHttp4s}
@@ -21,8 +21,10 @@ import org.http4s.client.blaze.BlazeClientBuilder
 import org.http4s.client.middleware.Logger
 import org.slf4j.LoggerFactory
 import telegramium.bots.high.{Api, BotApi}
-import doobie.ExecutionContexts
-import io.github.oybek.gdetram.domain.handler.{CityHandler, FirstHandler, PsHandler, StopHandler}
+
+import doobie.implicits._
+import doobie.{ExecutionContexts, Transactor}
+import io.github.oybek.gdetram.domain.handler.{CityHandler, FirstHandler, StatusFormer, StopHandler}
 
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.duration._
@@ -41,24 +43,25 @@ object Main extends IOApp {
       _ <- Sync[F].delay { log.info(s"loaded config: $config") }
       _ <- resources(config)
         .use {
-          case (transactor, httpClient, blocker) =>
+          case (hikariTransactor, httpClient, blocker) =>
+            implicit val transactor      : Transactor[F]       = hikariTransactor
             implicit val client          : Client[F]           = Logger(logHeaders = false, logBody = false)(httpClient)
 
             implicit val cityRepo        : CityRepoAlg[F]      = new CityRepo[F](transactor)
             implicit val journalRepo     : JournalRepoAlg[F]   = new JournalRepo(transactor)
             implicit val stopRepo        : StopRepoAlg[F]      = new StopRepo(transactor)
-            implicit val userRepo        : UserRepo[F]      = new UserRepoImpl[F](transactor)
-            implicit val messageRepo     : MessageRepoAlg[F]   = new MessageRepo[F](transactor)
+            implicit val userRepo        : UserRepo            = new UserRepoImpl
+            implicit val messageRepo     : MessageRepo         = new MessageRepoImpl
 
             implicit val documentFetcher : DocFetcherAlg[F]    = new DocFetcher[F]
-            implicit val source1         : TabloidService[F]       = new TabloidServiceBustimeImpl[F]
+            implicit val source1         : TabloidService[F]   = new TabloidServiceBustimeImpl[F]
 
             implicit val firstHandler    : FirstHandler[F]     = new FirstHandler[F]
             implicit val cityHandler     : CityHandler[F]      = new CityHandler[F]
             implicit val stopHandler     : StopHandler[F]      = new StopHandler[F]
-            implicit val psHandler       : PsHandler[F]        = new PsHandler[F]
+            implicit val statusFormer    : StatusFormer[F]     = new StatusFormer[F]
 
-            implicit val core            : Logic[F]          = new LogicImpl[F]
+            implicit val core            : Logic[F]            = new LogicImpl[F]
             implicit val metricService   : MetricServiceAlg[F] = new MetricService[F]
 
             implicit val vkBotApi        : VkApi[F]            = new VkApiHttp4s[F](client)
@@ -68,7 +71,7 @@ object Main extends IOApp {
             implicit val tgBot: TgBot[F] = new TgBot[F](config.adminTgIds.split(",").map(_.trim).toList)
 
             for {
-              _ <- DB.initialize(transactor)
+              _ <- DB.initialize(hikariTransactor)
               f1 <- vkBot.start.start
               f2 <- tgBot.start.start
 
@@ -86,9 +89,12 @@ object Main extends IOApp {
         }
     } yield ExitCode.Success
 
-  private def spamTg(messageRepo: MessageRepoAlg[F])(implicit tgBot: TgBot[F]): F[Unit] =
+  private def spamTg(messageRepo: MessageRepo)(implicit
+                                               tgBot: TgBot[F],
+                                               transactor: Transactor[F]): F[Unit] =
     messageRepo
       .pollSyncMessage(Tg)
+      .transact(transactor)
       .flatTap(x => Sync[F].delay(log.info(s"sync_message tg: $x")))
       .flatMap {
         case List((Tg, id, text)) => tgBot.send(id.toInt, text)
@@ -103,9 +109,12 @@ object Main extends IOApp {
       }
       .every(10.seconds, (9, 20))
 
-  private def spamVk(messageRepo: MessageRepoAlg[F])(implicit vkBot: VkBot[F]): F[Unit] =
+  private def spamVk(messageRepo: MessageRepo)(implicit
+                                               vkBot: VkBot[F],
+                                               transactor: Transactor[F]): F[Unit] =
     messageRepo
       .pollSyncMessage(Vk, 100)
+      .transact(transactor)
       .flatTap(x => Sync[F].delay(log.info(s"sync_message vk: $x")))
       .flatMap {
         case (Vk, id, text)::xs =>

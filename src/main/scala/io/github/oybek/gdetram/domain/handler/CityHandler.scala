@@ -3,6 +3,8 @@ package io.github.oybek.gdetram.domain.handler
 import cats.data.EitherT
 import cats.effect.Sync
 import cats.implicits._
+import doobie.implicits._
+import doobie.Transactor
 import io.github.oybek.gdetram.db.repository._
 import io.github.oybek.gdetram.domain.{Geo, Input, Text}
 import io.github.oybek.gdetram.domain.Phrases._
@@ -10,15 +12,20 @@ import io.github.oybek.gdetram.model._
 
 class CityHandler[F[_]: Sync](implicit
                               cityRepo: CityRepoAlg[F],
-                              userRepo: UserRepo[F],
-                              stopRepo: StopRepoAlg[F]) extends Handler[F, (UserId, Input), (City, Text)] {
+                              userRepo: UserRepo,
+                              stopRepo: StopRepoAlg[F],
+                              transactor: Transactor[F]) extends Handler[F, (UserId, Input), (City, Text)] {
 
   override def handle(input: (UserId, Input)): EitherT[F, Reply, (City, Text)] = input match {
     case ((platform, userId), Geo(latitude, longitude)) =>
       replyF(nearestCityInfo(platform, userId.toInt, latitude, longitude))
 
     case ((platform, userId), Text(text)) =>
-      EitherT.right(userRepo.select(platform, userId.toInt)).flatMap {
+      EitherT.right(
+        userRepo
+          .select(platform, userId.toInt)
+          .transact(transactor)
+      ).flatMap {
         case Some(user) if !text.trim.toLowerCase.startsWith("город") =>
           nextF(cityRepo.select(user.cityId).map((_, Text(text))))
         case _ =>
@@ -39,7 +46,7 @@ class CityHandler[F[_]: Sync](implicit
       _ <- nearestStops.headOption.traverse(
         stop => userRepo.upsert(
           User(platform, userId.toInt, stop.city.id, None, 0)
-        )
+        ).transact(transactor)
       ).void
     } yield (
       s"""
@@ -53,7 +60,7 @@ class CityHandler[F[_]: Sync](implicit
 
   private def gotCity(user: (Platform, Long), city: City): F[Reply] =
     for {
-      _ <- userRepo.upsert(User(user._1, user._2.toInt, city.id, None, 0))
+      _ <- userRepo.upsert(User(user._1, user._2.toInt, city.id, None, 0)).transact(transactor)
       cities <- cityRepo.selectAll
       text = cityChosen(city.name, cities.map(_.name))
       kbrd = defaultKbrd(TextButton("город " + city.name))

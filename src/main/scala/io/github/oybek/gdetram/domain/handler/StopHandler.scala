@@ -18,10 +18,10 @@ class StopHandler[F[_] : Applicative: Monad: Timer](implicit
                                                     tabloid: TabloidService[F]) extends Handler[F, (UserId, City, Text), Reply] {
 
   override def handle(input: (UserId, City, Text)): EitherT[F, Reply, Reply] = input match {
-    case (userId, city, Text(userText)) =>
-      EitherT.right(stopRepo.selectMostMatched(userText, city.id)).flatMap {
+    case (userId, city, Text(stopName)) =>
+      EitherT.right(stopRepo.selectMostMatched(stopName, city.id)).flatMap {
         case Some((stop, mistakeNum)) if mistakeNum < (stop.name.length / 2).max(4) =>
-          nextF(replyTabloid(userId, city, userText, stop))
+          nextF(replyTabloid(userId, stopName, stop))
 
         case Some(_) =>
           reply(
@@ -29,21 +29,18 @@ class StopHandler[F[_] : Applicative: Monad: Timer](implicit
               |Не знаю такую остановку 😟
               |
               |Отправьте геопозицию - я подскажу названия ближайших остановок
-              |""".stripMargin,
-            defaultKbrd(TextButton("город " + city.name)))
+              |""".stripMargin, defaultKbrd)
 
         case None =>
           reply(
             s"""
                |Для города ${city.name}
                |пока не загружена база остановок
-               |""".stripMargin,
-            defaultKbrd(TextButton("город " + city.name)))
+               |""".stripMargin, defaultKbrd)
       }
   }
 
   private def replyTabloid(userId: UserId,
-                           city: City,
                            userText: String,
                            stop: Stop) =
     for {
@@ -52,10 +49,7 @@ class StopHandler[F[_] : Applicative: Monad: Timer](implicit
       _ <- journalRepo.insert(Record(stop.id, new Timestamp(currMillis), userId._2.toString, userText, userId._1))
     } yield (
       tabloidText,
-      defaultKbrd(
-        TextButton("город " + city.name),
-        TextButton(stop.name)
-      )
+      defaultKbrd(TextButton(stop.name))
     )
 
   private def getTabloid(stop: Stop) =

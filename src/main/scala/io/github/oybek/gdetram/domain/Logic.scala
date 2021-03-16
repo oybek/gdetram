@@ -13,7 +13,7 @@ class LogicImpl[F[_]: Sync: Concurrent: Timer](implicit
                                                firstHandler: FirstHandler[F],
                                                cityHandler: CityHandler[F],
                                                stopHandler: StopHandler[F],
-                                               psHandler: PsHandler[F])
+                                               statusFormer: StatusFormer[F])
     extends Logic[F] {
 
   def handle(userId: UserId)(input: Input): F[Reply] = (
@@ -21,9 +21,9 @@ class LogicImpl[F[_]: Sync: Concurrent: Timer](implicit
       _            <- firstHandler.handle(input)
       (city, text) <- cityHandler.handle(userId, input)
       (text, kbrd) <- stopHandler.handle(userId, city, text)
-      psText       <- psHandler.handle(userId)
+      status       <- statusFormer.handle(userId, city)
     } yield (
-      text + psText.fold("")("\n" + _),
+      text + status.fold("")("\n" + _),
       kbrd
     )
   ).fold(identity, identity)
