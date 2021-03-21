@@ -1,7 +1,6 @@
 package io.github.oybek.gdetram
 
 import java.util.concurrent.TimeUnit
-import cats.data.NonEmptyList
 import cats.syntax.all._
 import cats.instances.list._
 import cats.instances.option._
@@ -10,7 +9,6 @@ import cats.~>
 import doobie.hikari.HikariTransactor
 import io.github.oybek.gdetram.config.Config
 import io.github.oybek.gdetram.model.Platform.{Tg, Vk}
-import io.github.oybek.gdetram.service.DocumentService
 import io.github.oybek.gdetram.service._
 import io.github.oybek.gdetram.util.TimeTools._
 import io.github.oybek.vk4s.api.{GetConversationsReq, GetLongPollServerReq, Unanswered, VkApi, VkApiHttp4s}
@@ -24,7 +22,7 @@ import doobie.implicits._
 import doobie.{ConnectionIO, ExecutionContexts}
 import io.github.oybek.gdetram.dao.impl.{CityRepoImpl, JournalRepoImpl, MessageRepoImpl, StopRepoImpl, UserRepoImpl}
 import io.github.oybek.gdetram.dao.{CityRepo, JournalRepo, MessageRepo, StopRepo, UserRepo}
-import io.github.oybek.gdetram.service.impl.{CityService, LogicImpl, MetricServiceImpl, RegistrationService, StartService, StatusService, StopService, TabloidServiceImpl}
+import io.github.oybek.gdetram.service.impl.{CityService, LogicImpl, MetricServiceImpl, RegistrationService, StartService, StatusService, StopService, TabloidServiceImpl, UserServiceImpl}
 
 import scala.concurrent.duration.FiniteDuration
 import scala.concurrent.duration._
@@ -78,18 +76,14 @@ object Main extends IOApp {
 
             for {
               _ <- DB.initialize(transactor)
-              //f1 <- vkBot.start.start
+              f1 <- vkBot.start.start
               f2 <- tgBot.start.start
-
               _ <- tgBot.dailyReports("Ну что уебаны?! Готовы к метрикам?".some).everyDayAt(8, 0).start
-
-              //_ <- spamTg(messageRepo).start.void
-              //_ <- spamVk(messageRepo).start.void
-
-              _ <- vkRevoke(vkBotApi, vkBot, config.getLongPollServerReq)
-                .every(10.seconds, (9, 24)).start.void
-
-              // _ <- f1.join
+              _ <- spamTg(messageRepo).start.void
+              _ <- spamVk(messageRepo).start.void
+              _ <- vkRevoke(vkBotApi, vkBot, config.getLongPollServerReq).every(10.seconds, (9, 24)).start.void
+              _ <- transaction(UserServiceImpl.refreshUserInfo).attempt.void.everyDayAt(0, 0).start
+              _ <- f1.join
               _ <- f2.join
             } yield ()
         }
