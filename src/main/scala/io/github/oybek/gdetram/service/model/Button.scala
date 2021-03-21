@@ -1,14 +1,14 @@
-package io.github.oybek.gdetram.model
+package io.github.oybek.gdetram.service.model
 
 import io.github.oybek.vk4s.api.{Action, Keyboard, Button => VkButton}
 import telegramium.bots.{InlineKeyboardButton, InlineKeyboardMarkup}
 
 sealed trait Button
-case class TextButton(text: String) extends Button
-case class LinkButton(text: String, url: String) extends Button
-case object GeoButton extends Button
 
 object Button {
+  case class TextButton(text: String) extends Button
+  case class LinkButton(text: String, url: String) extends Button
+  case object GeoButton extends Button
 
   implicit class VkButtonConverter(val button: Button) extends AnyVal {
     def toVk: VkButton = button match {

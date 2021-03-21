@@ -1,7 +1,8 @@
 package io.github.oybek.gdetram.model
 
-case class User(platform: Platform,
-                id: Int,
+import io.github.oybek.gdetram.service.UserId
+
+case class User(userId: UserId,
                 cityId: Int,
-                lastStopId: Option[Int],
-                lastMonthActiveDays: Int)
+                lastStopId: Option[Int] = None,
+                lastMonthActiveDays: Int = 0)

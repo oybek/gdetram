@@ -5,4 +5,4 @@ case class Stop(id: Int,
                 latitude: Float,
                 longitude: Float,
                 url: String,
-                city: City)
+                cityId: Int)

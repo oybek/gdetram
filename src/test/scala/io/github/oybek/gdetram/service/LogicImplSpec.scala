@@ -5,9 +5,9 @@ import com.dimafeng.testcontainers.{ForAllTestContainer, PostgreSQLContainer}
 import doobie.implicits._
 import doobie.util.ExecutionContexts
 import doobie.util.transactor.Transactor
-import io.github.oybek.gdetram.db.repository._
-import io.github.oybek.gdetram.domain.handler.{CityHandler, FirstHandler, StatusFormer, StopHandler}
-import io.github.oybek.gdetram.domain.{LogicImpl, Text}
+import io.github.oybek.gdetram.dao.impl.UserRepoImpl
+import io.github.oybek.gdetram.dao.{CityRepo, JournalRepo, StopRepo}
+import io.github.oybek.gdetram.service.impl.{RegistrationService, StartService}
 import io.github.oybek.gdetram.donnars.StopDonnar
 import io.github.oybek.gdetram.model.Platform.Vk
 import io.github.oybek.gdetram.model.{City, Stop, User}
@@ -20,6 +20,7 @@ import org.scalatest.matchers.should.Matchers
 
 import scala.concurrent.duration._
 
+/*
 class LogicImplSpec extends AnyFlatSpec with Matchers
                                         with MockFactory
                                         with StopDonnar
@@ -40,11 +41,11 @@ class LogicImplSpec extends AnyFlatSpec with Matchers
   implicit lazy val messageRepo = new MessageRepoImpl
   implicit lazy val stopRepo = stub[StopRepoAlg[IO]]
   implicit lazy val extractor = stub[TabloidService[IO]]
-  implicit lazy val cityRepo = stub[CityRepoAlg[IO]]
+  implicit lazy val cityRepo = stub[CityRepo[IO]]
   implicit lazy val userRepo = new UserRepoImpl
 
-  implicit lazy val firstHandler = new FirstHandler[IO]
-  implicit lazy val cityHandler = new CityHandler[IO]
+  implicit lazy val firstHandler = new StartService[IO]
+  implicit lazy val cityHandler = new RegistrationService[IO]
   implicit lazy val stopHandler = new StopHandler[IO]
   implicit lazy val psHandler = new StatusFormer[IO]
 
@@ -104,3 +105,6 @@ class LogicImplSpec extends AnyFlatSpec with Matchers
 
   private val rightArrow = "➡️"
 }
+
+
+ */

@@ -1,4 +1,4 @@
-package io.github.oybek.gdetram.db
+package io.github.oybek.gdetram
 
 import cats.effect.{Async, Blocker, ContextShift, Resource, Sync}
 import doobie.hikari.HikariTransactor

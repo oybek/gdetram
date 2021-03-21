@@ -5,9 +5,10 @@ import cats.effect.concurrent.Ref
 import cats.effect.syntax.all._
 import cats.effect.{Async, Clock, Concurrent, Sync, Timer}
 import cats.syntax.all._
-import io.github.oybek.gdetram.db.repository.JournalRepoAlg
-import io.github.oybek.gdetram.domain.{Logic, Geo, Text}
+import io.github.oybek.gdetram.dao.JournalRepo
 import io.github.oybek.gdetram.model.Platform.Vk
+import io.github.oybek.gdetram.service.Logic
+import io.github.oybek.gdetram.service.model.Message.{Geo, Text}
 import io.github.oybek.gdetram.util.Formatting._
 import io.github.oybek.vk4s.api._
 import io.github.oybek.vk4s.domain.{AudioMessage, LongPollBot, MessageNew, WallPostNew, WallReplyNew}
@@ -29,7 +30,7 @@ class VkBot[F[_]: Async: Timer: Concurrent](getLongPollServerReq: GetLongPollSer
       message match {
         case MessageNew(_, _, peerId, _, _, Some(geo), _) =>
           for {
-            answer <- core.handle(Vk -> peerId)(Geo(geo.coordinates.latitude, geo.coordinates.longitude))
+            answer <- core.handle(Vk -> peerId, Geo(geo.coordinates.latitude, geo.coordinates.longitude))
             _ <- sendMessage(Left(peerId), text = answer._1, keyboard = answer._2.toVk.some)
           } yield ()
 
@@ -49,13 +50,13 @@ class VkBot[F[_]: Async: Timer: Concurrent](getLongPollServerReq: GetLongPollSer
               case Some(AudioMessage(_, _, _, _, _, Some(text))) => text
               case _ => "Cannot recognize speech"
             }
-            answer <- core.handle(Vk -> peerId)(Text(text))
+            answer <- core.handle(Vk -> peerId, Text(text))
             _ <- sendMessage(Left(peerId), text = answer._1, keyboard = answer._2.toVk.some)
           } yield ()
 
         case MessageNew(_, _, peerId, _, text, _, _) =>
           for {
-            answer <- core.handle(Vk -> peerId)(Text(text))
+            answer <- core.handle(Vk -> peerId, Text(text))
             _ <- sendMessage(
               Left(peerId),
               text = answer._1,
