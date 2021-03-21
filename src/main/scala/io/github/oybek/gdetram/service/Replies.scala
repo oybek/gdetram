@@ -45,9 +45,10 @@ object Replies {
     List(List(GeoButton))
   )
 
-  def nearestStops(stops: List[Stop]): Reply = (
+  def nearestStops(stops: List[Stop], cityName: String): Reply = (
     "Ближайшие остановки:\n" +
-      stops.map("\uD83D\uDE8F " + _.name).mkString("\n"),
+    stops.map("\uD83D\uDE8F " + _.name).mkString("\n") + "\n" +
+    s"$cityName",
     stops.map(stop => List(TextButton(stop.name)))
   )
 }

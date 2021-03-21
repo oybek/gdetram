@@ -3,7 +3,7 @@ package io.github.oybek.gdetram.service.impl
 import cats.effect._
 import cats.implicits._
 import cats.{Monad, ~>}
-import io.github.oybek.gdetram.dao.{JournalRepo, StopRepo, UserRepo}
+import io.github.oybek.gdetram.dao.{CityRepo, JournalRepo, StopRepo, UserRepo}
 import io.github.oybek.gdetram.model._
 import io.github.oybek.gdetram.service.Replies.{cantFindStop, nearestStops, noCityBase}
 import io.github.oybek.gdetram.service._
@@ -15,6 +15,7 @@ import io.github.oybek.gdetram.util.Formatting
 import java.sql.Timestamp
 
 class StopService[F[_] : Monad: Timer, G[_]: Monad](implicit
+                                                    cityRepo: CityRepo[G],
                                                     stopRepo: StopRepo[G],
                                                     userRepo: UserRepo[G],
                                                     journalRepo: JournalRepo[G],
@@ -24,9 +25,10 @@ class StopService[F[_] : Monad: Timer, G[_]: Monad](implicit
   override def handle(user: User, message: Message): F[Either[Reply, Reply]] = message match {
     case geo: Geo =>
       transaction {
-        stopRepo
-          .getNearest(geo)
-          .map(nearestStops(_).asLeft[Reply])
+        for {
+          city <- cityRepo.get(user.cityId)
+          stops <- stopRepo.getNearest(geo)
+        } yield nearestStops(stops, city.name).asLeft[Reply]
       }
 
     case Text(text) =>
