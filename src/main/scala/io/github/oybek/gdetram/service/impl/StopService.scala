@@ -11,6 +11,7 @@ import io.github.oybek.gdetram.service.model.Button.TextButton
 import io.github.oybek.gdetram.service.model.Message
 import io.github.oybek.gdetram.service.model.Message.{Geo, Text}
 import io.github.oybek.gdetram.util.Formatting
+import io.github.oybek.plato.model.Arrival
 
 import java.sql.Timestamp
 
@@ -69,10 +70,10 @@ class StopService[F[_] : Monad: Timer, G[_]: Monad](implicit
       .getArrivals(stop)
       .map {
         case Nil => s"На остановку ${stop.name} сейчас ничего не едет"
-        case l =>
-          l.map {
-            case (dir, arrivals) =>
-              Formatting.toChatText(stop, dir, arrivals)
+        case arrivals =>
+          val (nonEmptyArrivals, emptyArrivals) = arrivals.partition(_._2.nonEmpty)
+          (nonEmptyArrivals.sortBy(_._1) ++ emptyArrivals.sortBy(_._1)).map {
+            case (dir, arrivals) => Formatting.toChatText(stop, dir, arrivals)
           }.mkString
       }
 }
